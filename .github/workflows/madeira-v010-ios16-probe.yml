@@ -9,56 +9,44 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout main
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Fetch v0.1.0 from upstream
+      - name: Fetch v010 tag
         run: |
           git fetch https://github.com/willfaust/Madeira.git refs/tags/v0.1.0:refs/tags/v0.1.0
           git checkout v0.1.0
           git submodule update --init --recursive
 
-      - name: Debug: show SteamSession before patch
+      - name: Show file before patch
         run: |
-          echo "=== PWD ==="
-          pwd
-          echo "=== File exists? ==="
-          ls -la app/Madeira/SwiftSteam/Core/SteamSession.swift
-          echo "=== Lines 10-20 with line numbers ==="
-          cat -n app/Madeira/SwiftSteam/Core/SteamSession.swift | sed -n '10,20p'
-          echo "=== grep @Observable ==="
-          grep -n "@Observable" app/Madeira/SwiftSteam/Core/SteamSession.swift || echo "NOT FOUND"
+          echo "=== Lines 10-20 before ==="
+          sed -n '10,20p' app/Madeira/SwiftSteam/Core/SteamSession.swift
+          echo "=== grep Observable before ==="
+          grep -n "Observable" app/Madeira/SwiftSteam/Core/SteamSession.swift || echo "none"
 
-      - name: Patch Observable for iOS 16
+      - name: Patch Observable
         run: |
           FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
-          # Use python3 for reliable editing
-          python3 -c "
-import re
-with open('$FILE', 'r') as f:
-    content = f.read()
-# Remove @Observable line
-content = re.sub(r'^@Observable\n', '', content, flags=re.MULTILINE)
-# Add ObservableObject protocol
-content = content.replace('class SteamSession {', 'class SteamSession: ObservableObject {')
-# Add @Published to the 6 published properties
-for prop in ['connectionState', 'steamID', 'accountName', 'personaName', 'cellID', 'isSuspended']:
-    content = content.replace(f'private(set) var {prop}', f'@Published private(set) var {prop}')
-with open('$FILE', 'w') as f:
-    f.write(content)
-print('Patch done')
-"
-          echo "=== After patch: lines 10-20 ==="
-          cat -n "$FILE" | sed -n '10,20p'
-          echo "=== After patch: grep Observable ==="
-          grep -n "Observable" "$FILE" || echo "No Observable found"
+          sed -i '' 's/@Observable//g' "$FILE"
+          sed -i '' 's/class SteamSession {/class SteamSession: ObservableObject {/' "$FILE"
+          sed -i '' 's/private(set) var connectionState/@Published private(set) var connectionState/g' "$FILE"
+          sed -i '' 's/private(set) var steamID/@Published private(set) var steamID/g' "$FILE"
+          sed -i '' 's/private(set) var accountName/@Published private(set) var accountName/g' "$FILE"
+          sed -i '' 's/private(set) var personaName/@Published private(set) var personaName/g' "$FILE"
+          sed -i '' 's/private(set) var cellID/@Published private(set) var cellID/g' "$FILE"
+          sed -i '' 's/private(set) var isSuspended/@Published private(set) var isSuspended/g' "$FILE"
+          echo "=== Lines 10-20 after ==="
+          sed -n '10,20p' "$FILE"
+          echo "=== grep Observable after ==="
+          grep -n "Observable" "$FILE" || echo "none"
 
       - name: Xcode version
         run: xcodebuild -version
 
-      - name: Install brew deps
+      - name: Install deps
         run: |
           brew install cmake ninja meson pkg-config autoconf automake libtool bison flex sevenzip llvm
 
@@ -67,7 +55,7 @@ print('Patch done')
           mkdir -p app/Madeira/x86_64-vcruntime
           mkdir -p app/Madeira/fonts-ja
 
-      - name: Build for iOS 16.0
+      - name: Build
         env:
           GITHUB_ACTIONS: "true"
         run: |
