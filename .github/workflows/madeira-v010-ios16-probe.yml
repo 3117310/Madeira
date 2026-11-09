@@ -29,6 +29,8 @@ jobs:
       - name: Patch BGContinuedProcessingTask
         run: |
           FILE="app/Madeira/SteamDownloadBackground.swift"
+          sed -i '' 's/BGContinuedProcessingTaskRequest/AnyObject/g' "$FILE"
+          sed -i '' 's/BGContinuedProcessingTask/AnyObject/g' "$FILE"
           sed -i '' 's/if #available(iOS 26.0, \*)/if false/g' "$FILE"
 
       - name: Patch onChange
