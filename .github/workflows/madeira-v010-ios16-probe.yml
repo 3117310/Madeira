@@ -44,8 +44,8 @@ jobs:
         run: |
           FILE1="app/Madeira/SwiftSteam/SteamSignInView.swift"
           FILE2="app/Madeira/SteamGames.swift"
-          sed -i '' '/\.toolbar {/,/^}/d' "$FILE1"
-          sed -i '' '/\.toolbar {/,/^}/d' "$FILE2"
+          sed -i '' '/^    \.toolbar {/,/^    }$/d' "$FILE1"
+          sed -i '' '/^    \.toolbar {/,/^    }$/d' "$FILE2"
 
       - name: Xcode version
         run: xcodebuild -version
