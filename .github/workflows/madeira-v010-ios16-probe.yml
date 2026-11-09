@@ -9,12 +9,16 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout v0.1.0
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: 'v0.1.0'
-          submodules: recursive
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Fetch v0.1.0 from upstream
+        run: |
+          git fetch https://github.com/willfaust/Madeira.git refs/tags/v0.1.0:refs/tags/v0.1.0
+          git checkout v0.1.0
+          git submodule update --init --recursive
 
       - name: Xcode 版本
         run: xcodebuild -version && xcodebuild -showsdks | grep iOS
