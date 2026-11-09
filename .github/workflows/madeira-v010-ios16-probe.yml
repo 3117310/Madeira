@@ -20,19 +20,32 @@ jobs:
           git checkout v0.1.0
           git submodule update --init --recursive
 
-      - name: Xcode 版本
-        run: xcodebuild -version && xcodebuild -showsdks | grep iOS
+      - name: Patch Observable for iOS 16
+        run: |
+          FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
+          sed -i '' '/^@Observable$/d' "$FILE"
+          sed -i '' 's/^class SteamSession {$/class SteamSession: ObservableObject {/' "$FILE"
+          sed -i '' 's/private(set) var connectionState/@Published private(set) var connectionState/' "$FILE"
+          sed -i '' 's/private(set) var steamID/@Published private(set) var steamID/' "$FILE"
+          sed -i '' 's/private(set) var accountName/@Published private(set) var accountName/' "$FILE"
+          sed -i '' 's/private(set) var personaName/@Published private(set) var personaName/' "$FILE"
+          sed -i '' 's/private(set) var cellID/@Published private(set) var cellID/' "$FILE"
+          sed -i '' 's/private(set) var isSuspended/@Published private(set) var isSuspended/' "$FILE"
+          head -20 "$FILE"
 
-      - name: 安装 brew 依赖
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Install brew deps
         run: |
           brew install cmake ninja meson pkg-config autoconf automake libtool bison flex sevenzip llvm
 
-      - name: 占位缺失目录
+      - name: Placeholder dirs
         run: |
           mkdir -p app/Madeira/x86_64-vcruntime
           mkdir -p app/Madeira/fonts-ja
 
-      - name: 编译（目标 iOS 16.0，不签名）
+      - name: Build for iOS 16.0
         env:
           GITHUB_ACTIONS: "true"
         run: |
@@ -48,19 +61,21 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build 2>&1 | tee build.log
 
-      - name: 统计错误
+      - name: Stats
         if: always()
         run: |
-          echo "=== Swift 编译次数 ==="
+          echo "=== Swift compiles ==="
           grep -c "SwiftCompile" build.log || true
-          echo "=== 可用性错误总数 ==="
+          echo "=== Availability errors ==="
           grep -c "only available in iOS" build.log || true
-          echo "=== 可用性版本分布 ==="
+          echo "=== Availability versions ==="
           grep -o "only available in iOS [0-9.]*" build.log | sort | uniq -c | sort -rn || true
-          echo "=== 失败文件 Top 15 ==="
+          echo "=== Total errors ==="
+          grep -c "error:" build.log || true
+          echo "=== Top failing files ==="
           grep "error:" build.log | grep -oE "[A-Za-z0-9_+.-]+\.swift" | sort | uniq -c | sort -rn | head -15 || true
 
-      - name: 上传构建日志
+      - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4
         with:
