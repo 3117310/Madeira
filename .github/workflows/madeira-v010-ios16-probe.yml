@@ -34,6 +34,11 @@ jobs:
           typealias BGContinuedProcessingTaskRequest = AnyObject\
           ' "$FILE"
 
+      - name: Patch toolbar ambiguity
+        run: |
+          FILE="app/Madeira/SwiftSteam/SteamSignInView.swift"
+          sed -i '' 's/\.toolbar {/.toolbar(content: {/g' "$FILE"
+
       - name: Xcode version
         run: xcodebuild -version
 
