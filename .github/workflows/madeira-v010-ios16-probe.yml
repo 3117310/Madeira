@@ -20,6 +20,13 @@ jobs:
           git checkout v0.1.0
           git submodule update --init --recursive
 
+      - name: Find all @Observable usages
+        run: |
+          echo "=== All files with @Observable ==="
+          grep -rn "@Observable" app/ --include="*.swift" || echo "None found"
+          echo "=== SteamSession.swift line 10-20 ==="
+          sed -n '10,20p' app/Madeira/SwiftSteam/Core/SteamSession.swift
+
       - name: Patch Observable for iOS 16
         run: |
           FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
@@ -31,7 +38,8 @@ jobs:
           sed -i '' 's/private(set) var personaName/@Published private(set) var personaName/' "$FILE"
           sed -i '' 's/private(set) var cellID/@Published private(set) var cellID/' "$FILE"
           sed -i '' 's/private(set) var isSuspended/@Published private(set) var isSuspended/' "$FILE"
-          head -20 "$FILE"
+          echo "=== After patch: line 10-20 ==="
+          sed -n '10,20p' "$FILE"
 
       - name: Xcode version
         run: xcodebuild -version
@@ -68,8 +76,6 @@ jobs:
           grep -c "SwiftCompile" build.log || true
           echo "=== Availability errors ==="
           grep -c "only available in iOS" build.log || true
-          echo "=== Availability versions ==="
-          grep -o "only available in iOS [0-9.]*" build.log | sort | uniq -c | sort -rn || true
           echo "=== Total errors ==="
           grep -c "error:" build.log || true
           echo "=== Top failing files ==="
