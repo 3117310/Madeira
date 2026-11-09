@@ -20,28 +20,24 @@ jobs:
           git checkout v0.1.0
           git submodule update --init --recursive
 
-      - name: Show file before patch
-        run: |
-          echo "=== Lines 10-20 before ==="
-          sed -n '10,20p' app/Madeira/SwiftSteam/Core/SteamSession.swift
-          echo "=== grep Observable before ==="
-          grep -n "Observable" app/Madeira/SwiftSteam/Core/SteamSession.swift || echo "none"
-
       - name: Patch Observable
         run: |
           FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
+          echo "=== BEFORE ===" > debug.txt
+          cat -n "$FILE" >> debug.txt
+          echo "" >> debug.txt
+          echo "=== md5 before ===" >> debug.txt
+          md5 "$FILE" >> debug.txt
           sed -i '' 's/@Observable//g' "$FILE"
           sed -i '' 's/class SteamSession {/class SteamSession: ObservableObject {/' "$FILE"
-          sed -i '' 's/private(set) var connectionState/@Published private(set) var connectionState/g' "$FILE"
-          sed -i '' 's/private(set) var steamID/@Published private(set) var steamID/g' "$FILE"
-          sed -i '' 's/private(set) var accountName/@Published private(set) var accountName/g' "$FILE"
-          sed -i '' 's/private(set) var personaName/@Published private(set) var personaName/g' "$FILE"
-          sed -i '' 's/private(set) var cellID/@Published private(set) var cellID/g' "$FILE"
-          sed -i '' 's/private(set) var isSuspended/@Published private(set) var isSuspended/g' "$FILE"
-          echo "=== Lines 10-20 after ==="
-          sed -n '10,20p' "$FILE"
-          echo "=== grep Observable after ==="
-          grep -n "Observable" "$FILE" || echo "none"
+          echo "=== AFTER ===" >> debug.txt
+          cat -n "$FILE" >> debug.txt
+          echo "" >> debug.txt
+          echo "=== md5 after ===" >> debug.txt
+          md5 "$FILE" >> debug.txt
+          echo "=== grep Observable ===" >> debug.txt
+          grep -n "Observable" "$FILE" >> debug.txt || echo "none" >> debug.txt
+          cat debug.txt
 
       - name: Xcode version
         run: xcodebuild -version
@@ -84,5 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: madeira-v010-build-log
-          path: build.log
+          path: |
+            build.log
+            debug.txt
           retention-days: 7
