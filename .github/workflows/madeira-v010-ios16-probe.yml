@@ -20,26 +20,40 @@ jobs:
           git checkout v0.1.0
           git submodule update --init --recursive
 
-      - name: Find all @Observable usages
+      - name: Debug: show SteamSession before patch
         run: |
-          echo "=== All files with @Observable ==="
-          grep -rn "@Observable" app/ --include="*.swift" || echo "None found"
-          echo "=== SteamSession.swift line 10-20 ==="
-          sed -n '10,20p' app/Madeira/SwiftSteam/Core/SteamSession.swift
+          echo "=== PWD ==="
+          pwd
+          echo "=== File exists? ==="
+          ls -la app/Madeira/SwiftSteam/Core/SteamSession.swift
+          echo "=== Lines 10-20 with line numbers ==="
+          cat -n app/Madeira/SwiftSteam/Core/SteamSession.swift | sed -n '10,20p'
+          echo "=== grep @Observable ==="
+          grep -n "@Observable" app/Madeira/SwiftSteam/Core/SteamSession.swift || echo "NOT FOUND"
 
       - name: Patch Observable for iOS 16
         run: |
           FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
-          sed -i '' '/^@Observable$/d' "$FILE"
-          sed -i '' 's/^class SteamSession {$/class SteamSession: ObservableObject {/' "$FILE"
-          sed -i '' 's/private(set) var connectionState/@Published private(set) var connectionState/' "$FILE"
-          sed -i '' 's/private(set) var steamID/@Published private(set) var steamID/' "$FILE"
-          sed -i '' 's/private(set) var accountName/@Published private(set) var accountName/' "$FILE"
-          sed -i '' 's/private(set) var personaName/@Published private(set) var personaName/' "$FILE"
-          sed -i '' 's/private(set) var cellID/@Published private(set) var cellID/' "$FILE"
-          sed -i '' 's/private(set) var isSuspended/@Published private(set) var isSuspended/' "$FILE"
-          echo "=== After patch: line 10-20 ==="
-          sed -n '10,20p' "$FILE"
+          # Use python3 for reliable editing
+          python3 -c "
+import re
+with open('$FILE', 'r') as f:
+    content = f.read()
+# Remove @Observable line
+content = re.sub(r'^@Observable\n', '', content, flags=re.MULTILINE)
+# Add ObservableObject protocol
+content = content.replace('class SteamSession {', 'class SteamSession: ObservableObject {')
+# Add @Published to the 6 published properties
+for prop in ['connectionState', 'steamID', 'accountName', 'personaName', 'cellID', 'isSuspended']:
+    content = content.replace(f'private(set) var {prop}', f'@Published private(set) var {prop}')
+with open('$FILE', 'w') as f:
+    f.write(content)
+print('Patch done')
+"
+          echo "=== After patch: lines 10-20 ==="
+          cat -n "$FILE" | sed -n '10,20p'
+          echo "=== After patch: grep Observable ==="
+          grep -n "Observable" "$FILE" || echo "No Observable found"
 
       - name: Xcode version
         run: xcodebuild -version
@@ -72,14 +86,10 @@ jobs:
       - name: Stats
         if: always()
         run: |
-          echo "=== Swift compiles ==="
-          grep -c "SwiftCompile" build.log || true
           echo "=== Availability errors ==="
           grep -c "only available in iOS" build.log || true
           echo "=== Total errors ==="
           grep -c "error:" build.log || true
-          echo "=== Top failing files ==="
-          grep "error:" build.log | grep -oE "[A-Za-z0-9_+.-]+\.swift" | sort | uniq -c | sort -rn | head -15 || true
 
       - name: Upload log
         if: always()
