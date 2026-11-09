@@ -23,16 +23,16 @@ jobs:
       - name: Patch Observable
         run: |
           FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
-          echo "=== FILE PATH ==="
-          ls -la "$FILE"
-          echo "=== BEFORE ==="
-          cat -n "$FILE" | head -20
           sed -i '' 's/@Observable//g' "$FILE"
           sed -i '' 's/class SteamSession {/class SteamSession: ObservableObject {/' "$FILE"
-          echo "=== AFTER ==="
-          cat -n "$FILE" | head -20
-          echo "=== grep Observable ==="
-          grep -n "Observable" "$FILE" || echo "none"
+
+      - name: Patch BGContinuedProcessingTask
+        run: |
+          FILE="app/Madeira/SteamDownloadBackground.swift"
+          sed -i '' '1i\
+          typealias BGContinuedProcessingTask = AnyObject\
+          typealias BGContinuedProcessingTaskRequest = AnyObject\
+          ' "$FILE"
 
       - name: Xcode version
         run: xcodebuild -version
@@ -51,11 +51,6 @@ jobs:
           GITHUB_ACTIONS: "true"
         run: |
           set -o pipefail
-          FILE="app/Madeira/SwiftSteam/Core/SteamSession.swift"
-          echo "=== FINAL FILE CONTENT ===" > build.log
-          cat -n "$FILE" >> build.log
-          echo "" >> build.log
-          echo "=== XCODEBUILD OUTPUT ===" >> build.log
           xcodebuild \
             -project app/Madeira.xcodeproj \
             -scheme Madeira \
@@ -65,7 +60,7 @@ jobs:
             IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            build 2>&1 | tee -a build.log
+            build 2>&1 | tee build.log
 
       - name: Stats
         if: always()
@@ -74,6 +69,8 @@ jobs:
           grep -c "only available in iOS" build.log || true
           echo "=== Total errors ==="
           grep -c "error:" build.log || true
+          echo "=== Errors ==="
+          grep "error:" build.log || true
 
       - name: Upload log
         if: always()
