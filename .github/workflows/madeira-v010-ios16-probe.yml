@@ -92,3 +92,4 @@ jobs:
           name: madeira-v010-build-log
           path: build.log
           retention-days: 7
+
